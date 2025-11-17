@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Crown Lands, Castries North</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    :root {
+      /* Saint Lucia flag inspired */
+      --sl-blue: #00a3e0;
+      --sl-yellow: #fcd116;
+      --sl-black: #111111;
+      --sl-white: #ffffff;
+
+      --bg-body: #f5f8fb;
+      --bg-card: #ffffff;
+      --border-soft: #dde3ec;
+      --text-main: #1b2c3b;
+      --text-soft: #4f6475;
+      --highlight: #00a3e0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: var(--bg-body);
+      color: var(--text-main);
+    }
+
+    header {
+      background: linear-gradient(
+        to right,
+        var(--sl-blue),
+        #32b5ff,
+        var(--sl-blue)
+      );
+      color: var(--sl-white);
+      padding: 1rem 1.25rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    header .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      justify-content: space-between;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: 0.02em;
+    }
+
+    header p {
+      margin: 0.25rem 0 0;
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .badge-pill {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 999px;
+      padding: 0.1rem 0.4rem;
+      font-size: 0.7rem;
+    }
+
+    main {
+      padding: 0.75rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Layout */
+
+    .layout {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    @media (min-width: 900px) {
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+        gap: 0.75rem;
+        align-items: stretch;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border-radius: 0.8rem;
+      padding: 0.75rem 0.9rem;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .panel-header h2 {
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    .panel-header small {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    /* Controls */
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    @media (min-width: 600px) {
+      .controls {
+        grid-template-columns: 1.1fr 1.2fr 0.9fr;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .field label {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    select,
+    input[type="text"] {
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border-soft);
+      font-size: 0.85rem;
+      outline: none;
+      background: #fdfefe;
+    }
+
+    select:focus,
+    input[type="text"]:focus {
+      border-color: var(--highlight);
+      box-shadow: 0 0 0 2px rgba(0, 163, 224, 0.15);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .pill {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      background: #f3f7fb;
+      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .pill span {
+      font-weight: 600;
+      color: var(--highlight);
+    }
+
+    /* Parcel list */
+
+    .parcel-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      overflow-y: auto;
+    }
+
+    .parcel-card {
+      border-radius: 0.6rem;
+      border: 1px solid var(--border-soft);
+      padding: 0.5rem 0.6rem;
+      background: var(--bg-card);
+      cursor: pointer;
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 0.35rem;
+      align-items: center;
+      transition: border 0.12s ease, box-shadow 0.12s ease,
+        transform 0.06s ease;
+    }
+    .parcel-actions button[data-action="apply"] {
+  background: var(--sl-yellow);
+  color: var(--sl-black);
+  font-weight: 600;
+}
+
+    
+
+    .parcel-card:hover {
+      border-color: rgba(0, 163, 224, 0.5);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .parcel-card.selected {
+      border-color: var(--highlight);
+      box-shadow: 0 0 0 2px rgba(0, 163, 224, 0.18);
+      background: #f0f8ff;
+    }
+
+    .parcel-main {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .parcel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .parcel-meta {
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    .parcel-tags {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 0.2rem;
+      font-size: 0.68rem;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 0.05rem 0.35rem;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      background: #f7fafc;
+    }
+
+    .tag-yellow {
+      background: var(--sl-yellow);
+      border-color: var(--sl-yellow);
+      color: var(--sl-black);
+      font-weight: 600;
+    }
+
+    .parcel-actions {
+      text-align: right;
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    .parcel-actions button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      background: var(--sl-blue);
+      color: var(--sl-white);
+    }
+
+    .parcel-actions button.secondary {
+      background: var(--sl-white);
+      border: 1px solid var(--sl-blue);
+      color: var(--sl-blue);
+      margin-right: 0.25rem;
+    }
+
+    .empty-message {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      padding: 0.5rem 0.25rem 0.3rem;
+    }
+
+    /* Details panel */
+
+    .details {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px dashed var(--border-soft);
+      font-size: 0.8rem;
+      color: var(--text-soft);
+    }
+
+    .details h3 {
+      margin: 0 0 0.3rem;
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.25rem 0.7rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .details-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-soft);
+    }
+
+    .details-value {
+      font-size: 0.8rem;
+    }
+
+    .details-note {
+      font-size: 0.75rem;
+      line-height: 1.4;
+      background: #f3f7fb;
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.5rem;
+    }
+
+    /* Map */
+
+    #map {
+      width: 100%;
+      height: 340px;
+      border-radius: 0.8rem;
+      border: 1px solid var(--border-soft);
+      overflow: hidden;
+    }
+
+    @media (min-width: 900px) {
+      #map {
+        height: 520px;
+      }
+    }
+
+    /* Small helper text */
+
+    .helper-text {
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      margin-top: 0.3rem;
+    }
+        /* Modal */
+
+        .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+
+    .modal-dialog {
+      background: var(--bg-card);
+      border-radius: 0.9rem;
+      max-width: 520px;
+      width: 90%;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-soft);
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 0.9rem;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 0.98rem;
+    }
+
+    .modal-close {
+      border: none;
+      background: transparent;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text-soft);
+    }
+
+    .modal-body {
+      padding: 0.8rem 1rem 1rem;
+      overflow-y: auto;
+      font-size: 0.83rem;
+      color: var(--text-main);
+    }
+
+    .modal-intro,
+    .modal-footnote {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      margin-bottom: 0.6rem;
+    }
+
+    .modal-steps {
+      padding-left: 1.1rem;
+      margin: 0 0 0.6rem;
+    }
+
+    .modal-steps li {
+      margin-bottom: 0.4rem;
+      line-height: 1.4;
+    }
+
+    .application-button {
+      margin-top: 0.5rem;
+      border-radius: 999px;
+      border: none;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.78rem;
+      cursor: pointer;
+      background: var(--sl-blue);
+      color: var(--sl-white);
+    }
+
+    .application-button:hover {
+      opacity: 0.95;
+    }
+
+
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="title-row">
+      <div>
+        <h1>Crown Lands, Castries North</h1>
+        <p>
+          La Clery, Bisee and Cedars, Crown owned parcels listed for public
+          awareness in Castries North.
+        </p>
+      </div>
+      <div class="badge">
+        <span class="badge-pill">CROWN</span>
+        <span>Castries North</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <!-- LEFT: parcel list and controls -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Parcels</h2>
+          <small id="parcel-count-label"></small>
+        </div>
+
+        <div class="controls">
+          <div class="field">
+            <label for="community-select">Community</label>
+            <select id="community-select">
+              <option value="All">All communities</option>
+              <option value="La Clery">La Clery</option>
+              <option value="Bisee">Bisee</option>
+              <option value="Cedars">Cedars</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="search-input">Search block or parcel</label>
+            <input
+              id="search-input"
+              type="text"
+              placeholder="Example: 1049B, 1123, 0848F"
+            />
+          </div>
+
+          <div class="field">
+            <label for="sort-select">Sort</label>
+            <select id="sort-select">
+              <option value="community-asc">Community, then block</option>
+              <option value="block-asc">Block, then parcel</option>
+              <option value="parcel-asc">Parcel number</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pill-row">
+          <div class="pill">
+            Communities:
+            <span>La Clery, Bisee, Cedars</span>
+          </div>
+          <div class="pill">
+            Ownership:
+            <span>Crown</span>
+          </div>
+        </div>
+
+        <ul id="parcel-list" class="parcel-list"></ul>
+
+        <div class="details" id="details-panel">
+          <h3>Tap a parcel to see details</h3>
+          <div class="details-note">
+            You can filter by community or search for a block and parcel
+            number combination. For example,
+            <strong>1049B 1123</strong> for La Clery or
+            <strong>1050B 155</strong> for Bisee.
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: map -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Map</h2>
+          <small>Approximate community locations in Castries North</small>
+        </div>
+        <div id="map"></div>
+        <p class="helper-text">
+          Each marker shows the centre of La Clery, Bisee or Cedars. Parcel
+          points are grouped by community in this prototype. A future
+          version can place each parcel at its exact boundary.
+        </p>
+      </section>
+    </div>
+  </main>
+
+   <!-- Application checklist modal -->
+   <div id="app-modal-backdrop" class="modal-backdrop" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="app-modal-title">How to apply for this Crown land</h3>
+        <button type="button" id="app-modal-close" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-intro">
+          This is a general checklist for applying for Crown land in Castries North.
+          Always confirm details with the Crown Lands office and Land Registry.
+        </p>
+
+        <ol class="modal-steps">
+          <li>
+            <strong>Get the application form.</strong>
+            Visit the Crown Lands office, request the official land application form.
+          </li>
+          <li>
+            <strong>Check the land status.</strong>
+            Go to the Land Registry, confirm that the land is classified as Crown land.
+          </li>
+          <li>
+            <strong>Prepare required documents.</strong>
+            Include a copy of your ID card (front and back), the map sheet and survey plan of the land, and the completed and signed application form.
+          </li>
+          <li>
+            <strong>Submit your application.</strong>
+            Return all documents to the Crown Lands office and receive confirmation that an officer has been assigned to your case.
+          </li>
+          <li>
+            <strong>Site visit.</strong>
+            A Land Officer will visit the site. This usually takes about two to three weeks.
+          </li>
+          <li>
+            <strong>Follow up.</strong>
+            Follow the instructions from the Land Officer to finalize the allocation or lease of the Crown land.
+          </li>
+        </ol>
+
+        <p class="modal-footnote">
+          This checklist is for guidance only. Official instructions from the Crown Lands office take priority.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load full parcel data (Castries North, all 197 rows) -->
+  <script src="castries_north_crown_lands_parcels_UPDATED.js"></script>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    // Community coordinates (approximate centres)
+    const COMMUNITY_COORDS = {
+      "La Clery": {
+        lat: 14.0185,
+        lng: -60.9842,
+        label: "La Clery",
+      },
+      Bisee: {
+        lat: 14.0243,
+        lng: -60.9745,
+        label: "Bisee",
+      },
+      Cedars: {
+        lat: 14.006,
+        lng: -60.9823,
+        label: "Cedars",
+      },
+    };
+
+    // UI state
+    let state = {
+      community: "All",
+      search: "",
+      sort: "community-asc",
+      selectedKey: null, // "community|block|parcel"
+    };
+
+    function makeKey(p) {
+      return `${p.community}|${p.block}|${p.parcel}`;
+    }
+
+    function filterParcels() {
+      const community = state.community;
+      const search = state.search.trim().toLowerCase();
+
+      let list = PARCELS.slice();
+
+      if (community !== "All") {
+        list = list.filter((p) => p.community === community);
+      }
+
+      if (search) {
+        list = list.filter((p) => {
+          const haystack = `${p.community} ${p.block} ${p.parcel}`
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+          return haystack.includes(search);
+        });
+      }
+
+      switch (state.sort) {
+        case "block-asc":
+          list.sort((a, b) => {
+            if (a.block === b.block) {
+              return a.parcel.localeCompare(b.parcel, undefined, {
+                numeric: true,
+              });
+            }
+            return a.block.localeCompare(b.block, undefined, {
+              numeric: true,
+            });
+          });
+          break;
+        case "parcel-asc":
+          list.sort((a, b) =>
+            a.parcel.localeCompare(b.parcel, undefined, { numeric: true })
+          );
+          break;
+        case "community-asc":
+        default:
+          list.sort((a, b) => {
+            if (a.community === b.community) {
+              if (a.block === b.block) {
+                return a.parcel.localeCompare(b.parcel, undefined, {
+                  numeric: true,
+                });
+              }
+              return a.block.localeCompare(b.block, undefined, {
+                numeric: true,
+              });
+            }
+            return a.community.localeCompare(b.community);
+          });
+      }
+
+      return list;
+    }
+
+    // DOM references
+
+    const communitySelect = document.getElementById("community-select");
+    const searchInput = document.getElementById("search-input");
+    const sortSelect = document.getElementById("sort-select");
+    const parcelListEl = document.getElementById("parcel-list");
+    const detailsPanel = document.getElementById("details-panel");
+    const parcelCountLabel = document.getElementById("parcel-count-label");
+
+    // Map setup
+
+    const map = L.map("map", {
+      scrollWheelZoom: true,
+      attributionControl: true,
+    });
+
+    const mapCenter = [14.015, -60.98];
+    map.setView(mapCenter, 13);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    const communityMarkers = {};
+
+    Object.entries(COMMUNITY_COORDS).forEach(([key, info]) => {
+      const marker = L.marker([info.lat, info.lng]).addTo(map);
+      marker.bindPopup(`<strong>${info.label}</strong><br />Castries North`);
+      communityMarkers[key] = marker;
+    });
+
+    function focusCommunity(community) {
+      if (community && community !== "All") {
+        const info = COMMUNITY_COORDS[community];
+        if (info) {
+          map.setView([info.lat, info.lng], 15);
+          const marker = communityMarkers[community];
+          if (marker) {
+            marker.openPopup();
+          }
+        }
+      } else {
+        map.setView(mapCenter, 13);
+      }
+    }
+
+    // Rendering
+
+    function renderParcelList() {
+  const parcels = filterParcels();
+  parcelListEl.innerHTML = "";
+
+  const total = PARCELS.length;
+  const shown = parcels.length;
+
+  parcelCountLabel.textContent = `${shown} of ${total} parcels shown`;
+
+  if (!parcels.length) {
+    parcelListEl.innerHTML =
+      '<li class="empty-message">No parcels match the current filters.</li>';
+    return;
+  }
+
+  parcels.forEach((p) => {
+    const key = makeKey(p);
+    const li = document.createElement("li");
+    li.className = "parcel-card";
+    if (key === state.selectedKey) {
+      li.classList.add("selected");
+    }
+
+    li.innerHTML = `
+      <div class="parcel-main">
+        <div class="parcel-title">${p.block} ${p.parcel}</div>
+        <div class="parcel-meta">
+          ${p.community} &middot; ${p.district}
+        </div>
+        <div class="parcel-tags">
+          <span class="tag tag-yellow">${p.ownership}</span>
+          <span class="tag">Block ${p.block}</span>
+          <span class="tag">${p.community}</span>
+        </div>
+      </div>
+      <div class="parcel-actions">
+        <button class="secondary" type="button" data-action="details">Details</button>
+        <button type="button" data-action="locate">Locate</button>
+        <button type="button" data-action="apply">Apply</button>
+      </div>
+    `;
+
+    // Clicking anywhere on the card still selects it
+    li.addEventListener("click", () => {
+      state.selectedKey = key;
+      renderParcelList();
+      renderDetails(p);
+      focusCommunity(p.community);
+    });
+
+    // Button-specific actions
+    const detailsBtn = li.querySelector('button[data-action="details"]');
+    const locateBtn = li.querySelector('button[data-action="locate"]');
+    const applyBtn = li.querySelector('button[data-action="apply"]');
+
+    if (detailsBtn) {
+      detailsBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        state.selectedKey = key;
+        renderParcelList();
+        renderDetails(p);
+      });
+    }
+
+    if (locateBtn) {
+      locateBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        state.selectedKey = key;
+        renderParcelList();
+        renderDetails(p);
+        focusCommunity(p.community);
+      });
+    }
+
+    if (applyBtn) {
+      applyBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        state.selectedKey = key;
+        renderParcelList();
+        renderDetails(p);
+        openApplicationModal(p);
+      });
+    }
+
+    parcelListEl.appendChild(li);
+  });
+}
+
+
+    function renderDetails(parcel) {
+      if (!parcel) {
+        detailsPanel.innerHTML = `
+          <h3>Tap a parcel to see details</h3>
+          <div class="details-note">
+            You can filter by community or search for a block and parcel
+            number combination.
+          </div>
+        `;
+        return;
+      }
+
+      detailsPanel.innerHTML = `
+        <h3>${parcel.block} ${parcel.parcel}</h3>
+        <div class="details-grid">
+          <div>
+            <div class="details-label">Community</div>
+            <div class="details-value">${parcel.community}</div>
+          </div>
+          <div>
+            <div class="details-label">District</div>
+            <div class="details-value">${parcel.district}</div>
+          </div>
+          <div>
+            <div class="details-label">Ownership</div>
+            <div class="details-value">${parcel.ownership}</div>
+          </div>
+          <div>
+            <div class="details-label">Block</div>
+            <div class="details-value">${parcel.block}</div>
+          </div>
+        </div>
+        <div class="details-note">
+          This parcel is recorded as Crown land in Castries North.
+          For official confirmation, valuation or applications, residents
+          should contact the responsible government department using the
+          official land registry references for block and parcel.
+        </div>
+        <button type="button" id="open-app-checklist" class="application-button">
+          How to apply for this Crown land
+        </button>
+      `;
+
+      const openBtn = document.getElementById("open-app-checklist");
+      if (openBtn) {
+        openBtn.addEventListener("click", () => {
+          openApplicationModal(parcel);
+        });
+      }
+    }
+
+
+    // Event handlers
+
+    communitySelect.addEventListener("change", (e) => {
+      state.community = e.target.value;
+      focusCommunity(state.community);
+      renderParcelList();
+      renderDetails(
+        state.selectedKey
+          ? filterParcels().find((p) => makeKey(p) === state.selectedKey)
+          : null
+      );
+    });
+
+    searchInput.addEventListener("input", (e) => {
+      state.search = e.target.value;
+      renderParcelList();
+      renderDetails(
+        state.selectedKey
+          ? filterParcels().find((p) => makeKey(p) === state.selectedKey)
+          : null
+      );
+    });
+
+    sortSelect.addEventListener("change", (e) => {
+      state.sort = e.target.value;
+      renderParcelList();
+      renderDetails(
+        state.selectedKey
+          ? filterParcels().find((p) => makeKey(p) === state.selectedKey)
+          : null
+      );
+    });
+        // Application checklist modal logic
+
+        const modalBackdrop = document.getElementById("app-modal-backdrop");
+    const modalCloseBtn = document.getElementById("app-modal-close");
+    const modalTitle = document.getElementById("app-modal-title");
+
+    function openApplicationModal(parcel) {
+      if (modalTitle && parcel) {
+        modalTitle.textContent = `How to apply for Crown land at ${parcel.block} ${parcel.parcel}`;
+      }
+      if (modalBackdrop) {
+        modalBackdrop.style.display = "flex";
+      }
+    }
+
+    function closeApplicationModal() {
+      if (modalBackdrop) {
+        modalBackdrop.style.display = "none";
+      }
+    }
+
+    if (modalCloseBtn) {
+      modalCloseBtn.addEventListener("click", closeApplicationModal);
+    }
+
+    if (modalBackdrop) {
+      modalBackdrop.addEventListener("click", (event) => {
+        if (event.target === modalBackdrop) {
+          closeApplicationModal();
+        }
+      });
+    }
+
+
+    // Initial render
+    renderParcelList();
+    renderDetails(null);
+  </script>
+ 
+</body>
+</html>
